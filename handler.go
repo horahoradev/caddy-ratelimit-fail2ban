@@ -17,6 +17,7 @@ package caddyrl
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	weakrand "math/rand"
 	"net/http"
@@ -28,6 +29,7 @@ import (
 	"github.com/caddyserver/caddy/v2"
 	"github.com/caddyserver/caddy/v2/modules/caddyhttp"
 	"github.com/caddyserver/certmagic"
+	"github.com/redis/go-redis/v9"
 	"go.uber.org/zap"
 )
 
@@ -54,6 +56,12 @@ type Handler struct {
 	// How often to scan for expired rate limit states. Default: 1m.
 	SweepInterval caddy.Duration `json:"sweep_interval,omitempty"`
 
+	// Duration to ban users for if they exceed the limit threshold
+	BanDuration caddy.Duration `json:"ban_duration,omitempty"`
+
+	// Duration to ban users for if they exceed the limit threshold
+	BanThreshold int `json:"ban_threshold,omitempty"`
+
 	// Enables distributed rate limiting. For this to work properly, rate limit
 	// zones must have the same configuration for all instances in the cluster
 	// because an instance's own configuration is used to calculate whether a
@@ -69,6 +77,8 @@ type Handler struct {
 	storage    certmagic.Storage
 	random     *weakrand.Rand
 	logger     *zap.Logger
+
+	conn *redis.Client
 }
 
 // CaddyModule returns the Caddy module information.
@@ -154,6 +164,11 @@ func (h *Handler) Provision(ctx caddy.Context) error {
 }
 
 func (h Handler) ServeHTTP(w http.ResponseWriter, r *http.Request, next caddyhttp.Handler) error {
+
+	banned, err := h.isBanned(r.Header.Get("X-Forwarded-For"))
+	if err == nil && banned {
+		return caddyhttp.Error(http.StatusUnauthorized, errors.New("You are banned from the service."))
+	}
 	repl := r.Context().Value(caddy.ReplacerCtxKey).(*caddy.Replacer)
 
 	// iterate the slice, not the map, so the order is deterministic
@@ -184,11 +199,11 @@ func (h Handler) ServeHTTP(w http.ResponseWriter, r *http.Request, next caddyhtt
 		if h.Distributed == nil {
 			// internal rate limiter only
 			if dur := limiter.When(); dur > 0 {
-				return h.rateLimitExceeded(w, repl, rl.zoneName, dur)
+				return h.rateLimitExceeded(w, r, repl, rl.zoneName, dur)
 			}
 		} else {
 			// distributed rate limiting; add last known state of other instances
-			if err := h.distributedRateLimiting(w, repl, limiter, key, rl.zoneName); err != nil {
+			if err := h.distributedRateLimiting(w, r, repl, limiter, key, rl.zoneName); err != nil {
 				return err
 			}
 		}
@@ -197,7 +212,7 @@ func (h Handler) ServeHTTP(w http.ResponseWriter, r *http.Request, next caddyhtt
 	return next.ServeHTTP(w, r)
 }
 
-func (h *Handler) rateLimitExceeded(w http.ResponseWriter, repl *caddy.Replacer, zoneName string, wait time.Duration) error {
+func (h *Handler) rateLimitExceeded(w http.ResponseWriter, r *http.Request, repl *caddy.Replacer, zoneName string, wait time.Duration) error {
 	// add jitter, if configured
 	if h.random != nil {
 		jitter := h.randomFloatInRange(0, float64(wait)*h.Jitter)
@@ -210,7 +225,53 @@ func (h *Handler) rateLimitExceeded(w http.ResponseWriter, repl *caddy.Replacer,
 	// make some information about this rate limit available
 	repl.Set("http.rate_limit.exceeded.name", zoneName)
 
+	// nice one bucko
+	_ = h.incrDenies(r.Header.Get("X-Forwarded-For"))
+
 	return caddyhttp.Error(http.StatusTooManyRequests, nil)
+}
+
+func (h *Handler) incrDenies(identity string) error {
+	identity = fmt.Sprintf("ban:%s", identity)
+	res, err := h.conn.Incr(context.Background(), identity).Result()
+	if err != nil {
+		return err
+	}
+
+	ttl, err := h.conn.TTL(context.Background(), identity).Result()
+	if err != nil {
+		return err
+	} else if ttl == -1 {
+		// TTL hasn't been set, so we need to set it to the refresh period
+		// hardcoded ban window of 5 minutes
+		err = h.conn.Expire(context.Background(), identity, time.Minute*5).Err()
+		if err != nil {
+			return err
+		}
+	}
+
+	if res >= int64(h.BanThreshold) {
+		// set the expire to the ban duration
+		err = h.conn.Expire(context.Background(), identity, time.Duration(h.BanDuration)).Err()
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (h *Handler) isBanned(identity string) (bool, error) {
+	identity = fmt.Sprintf("ban:%s", identity)
+
+	res, err := h.conn.Get(context.Background(), identity).Int()
+	if errors.Is(err, redis.Nil) {
+		return false, nil
+	} else if err != nil {
+		return false, err
+	}
+
+	return res >= h.BanThreshold, nil
 }
 
 // Cleanup cleans up the handler.

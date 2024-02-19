@@ -22,6 +22,7 @@ import (
 	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
 	"github.com/caddyserver/caddy/v2/caddyconfig/httpcaddyfile"
 	"github.com/caddyserver/caddy/v2/modules/caddyhttp"
+	"github.com/redis/go-redis/v9"
 )
 
 func init() {
@@ -186,6 +187,43 @@ func (h *Handler) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 					return d.Errf("invalid sweep interval '%s': %v", d.Val(), err)
 				}
 				h.SweepInterval = caddy.Duration(interval)
+			case "ban_duration":
+				if !d.NextArg() {
+					return d.ArgErr()
+				}
+				if h.BanDuration != 0 {
+					return d.Errf("ban duration already specified: %v", h.SweepInterval)
+				}
+				duration, err := caddy.ParseDuration(d.Val())
+				if err != nil {
+					return d.Errf("invalid ban duration '%s': %v", d.Val(), err)
+				}
+				h.BanDuration = caddy.Duration(duration)
+			case "ban_threshold":
+				if !d.NextArg() {
+					return d.ArgErr()
+				}
+				if h.BanThreshold != 0 {
+					return d.Errf("ban threshold already specified: %v", h.SweepInterval)
+				}
+				threshold, err := strconv.ParseInt(d.Val(), 10, 64)
+				if err != nil {
+					return d.Errf("invalid ban threshold '%s': %v", d.Val(), err)
+				}
+				h.BanThreshold = int(threshold)
+
+			case "redis_conn":
+				if !d.NextArg() {
+					return d.ArgErr()
+				}
+				if h.conn != nil {
+					return d.Errf("redis conn specified: %v", h.SweepInterval)
+				}
+				redisConn := redis.NewClient(&redis.Options{
+					Addr: d.Val(),
+					DB:   0, // use default DB
+				})
+				h.conn = redisConn
 			}
 		}
 	}
