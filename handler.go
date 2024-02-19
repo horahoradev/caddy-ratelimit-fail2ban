@@ -176,7 +176,7 @@ func (h Handler) ServeHTTP(w http.ResponseWriter, r *http.Request, next caddyhtt
 
 		banned, err := h.isBanned(key)
 		if err == nil && banned {
-			return caddyhttp.Error(http.StatusUnauthorized, nil)
+			return caddyhttp.Error(http.StatusUnauthorized, errors.New("You have been banned from the service."))
 		} else if err != nil {
 			h.logger.Error("failed to determine user ban status", zap.Error(err))
 		}
@@ -230,7 +230,7 @@ func (h *Handler) rateLimitExceeded(w http.ResponseWriter, r *http.Request, key 
 	if err != nil {
 		h.logger.Error("Failed to increment denies", zap.Error(err))
 	}
-	return caddyhttp.Error(http.StatusTooManyRequests, nil)
+	return caddyhttp.Error(http.StatusTooManyRequests, errors.New("You've made too many requests, back off a bit."))
 }
 
 func (h Handler) incrDenies(identity string) error {
