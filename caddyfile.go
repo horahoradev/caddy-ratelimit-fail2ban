@@ -23,6 +23,7 @@ import (
 	"github.com/caddyserver/caddy/v2/caddyconfig/httpcaddyfile"
 	"github.com/caddyserver/caddy/v2/modules/caddyhttp"
 	"github.com/redis/go-redis/v9"
+	"go.uber.org/zap"
 )
 
 func init() {
@@ -33,6 +34,7 @@ func init() {
 func parseCaddyfile(helper httpcaddyfile.Helper) (caddyhttp.MiddlewareHandler, error) {
 	var h Handler
 	err := h.UnmarshalCaddyfile(helper.Dispenser)
+	h.logger.Error("Handler err", zap.Error(err))
 	return h, err
 }
 
