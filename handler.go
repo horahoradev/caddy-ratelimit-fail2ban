@@ -226,7 +226,7 @@ func (h *Handler) rateLimitExceeded(w http.ResponseWriter, r *http.Request, key 
 	repl.Set("http.rate_limit.exceeded.name", zoneName)
 
 	// nice one bucko
-	err := h.incrDenies(r.RemoteAddr)
+	err := h.incrDenies(key)
 	if err != nil {
 		h.logger.Error("Failed to increment denies", zap.Error(err))
 	}
