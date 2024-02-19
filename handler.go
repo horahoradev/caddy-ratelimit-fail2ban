@@ -57,10 +57,10 @@ type Handler struct {
 	SweepInterval caddy.Duration `json:"sweep_interval,omitempty"`
 
 	// Duration to ban users for if they exceed the limit threshold
-	BanDuration caddy.Duration `json:"ban_duration,omitempty"`
+	BanDuration caddy.Duration `json:"banduration,omitempty"`
 
 	// Duration to ban users for if they exceed the limit threshold
-	BanThreshold int `json:"ban_threshold,omitempty"`
+	BanThreshold int `json:"banthreshold,omitempty"`
 
 	// Enables distributed rate limiting. For this to work properly, rate limit
 	// zones must have the same configuration for all instances in the cluster
@@ -79,6 +79,8 @@ type Handler struct {
 	logger     *zap.Logger
 
 	conn *redis.Client
+
+	redisconn string `json:"redisconn,omitempty"`
 }
 
 // CaddyModule returns the Caddy module information.
