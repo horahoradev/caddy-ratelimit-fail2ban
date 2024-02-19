@@ -187,7 +187,7 @@ func (h *Handler) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 					return d.Errf("invalid sweep interval '%s': %v", d.Val(), err)
 				}
 				h.SweepInterval = caddy.Duration(interval)
-			case "ban_duration":
+			case "banduration":
 				if !d.NextArg() {
 					return d.ArgErr()
 				}
@@ -199,7 +199,7 @@ func (h *Handler) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 					return d.Errf("invalid ban duration '%s': %v", d.Val(), err)
 				}
 				h.BanDuration = caddy.Duration(duration)
-			case "ban_threshold":
+			case "banthreshold":
 				if !d.NextArg() {
 					return d.ArgErr()
 				}
@@ -212,7 +212,7 @@ func (h *Handler) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 				}
 				h.BanThreshold = int(threshold)
 
-			case "redis_conn":
+			case "redisconn":
 				if !d.NextArg() {
 					return d.ArgErr()
 				}
