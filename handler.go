@@ -165,7 +165,7 @@ func (h *Handler) Provision(ctx caddy.Context) error {
 
 func (h Handler) ServeHTTP(w http.ResponseWriter, r *http.Request, next caddyhttp.Handler) error {
 
-	banned, err := h.isBanned(r.Header.Get("X-Forwarded-For"))
+	banned, err := h.isBanned(r.RemoteAddr)
 	if err == nil && banned {
 		return caddyhttp.Error(http.StatusUnauthorized, nil)
 	} else if err != nil {
@@ -228,7 +228,7 @@ func (h *Handler) rateLimitExceeded(w http.ResponseWriter, r *http.Request, repl
 	repl.Set("http.rate_limit.exceeded.name", zoneName)
 
 	// nice one bucko
-	_ = h.incrDenies(r.Header.Get("X-Forwarded-For"))
+	_ = h.incrDenies(r.RemoteAddr)
 
 	return caddyhttp.Error(http.StatusTooManyRequests, nil)
 }
