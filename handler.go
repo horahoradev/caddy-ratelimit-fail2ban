@@ -168,6 +168,8 @@ func (h Handler) ServeHTTP(w http.ResponseWriter, r *http.Request, next caddyhtt
 	banned, err := h.isBanned(r.Header.Get("X-Forwarded-For"))
 	if err == nil && banned {
 		return caddyhttp.Error(http.StatusUnauthorized, nil)
+	} else if err != nil {
+		h.logger.Error("failed to determine user ban status", zap.Error(err))
 	}
 	repl := r.Context().Value(caddy.ReplacerCtxKey).(*caddy.Replacer)
 
