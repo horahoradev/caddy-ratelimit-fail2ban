@@ -188,6 +188,7 @@ func (h *Handler) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 				}
 				h.SweepInterval = caddy.Duration(interval)
 			case "banduration":
+				h.logger.Info("Configuring banduration")
 				if !d.NextArg() {
 					return d.ArgErr()
 				}
@@ -200,6 +201,7 @@ func (h *Handler) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 				}
 				h.BanDuration = caddy.Duration(duration)
 			case "banthreshold":
+				h.logger.Info("Configuring banthreshold")
 				if !d.NextArg() {
 					return d.ArgErr()
 				}
@@ -213,6 +215,7 @@ func (h *Handler) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 				h.BanThreshold = int(threshold)
 
 			case "redisconn":
+				h.logger.Info("Configuring redisconn")
 				if !d.NextArg() {
 					return d.ArgErr()
 				}
