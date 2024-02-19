@@ -1,4 +1,4 @@
-module github.com/mholt/caddy-ratelimit
+module github.com/horahoradev/caddy-ratelimit-fail2ban
 
 go 1.21
 
