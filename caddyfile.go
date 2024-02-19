@@ -15,7 +15,6 @@
 package caddyrl
 
 import (
-	"context"
 	"strconv"
 
 	"github.com/caddyserver/caddy/v2"
@@ -24,7 +23,6 @@ import (
 	"github.com/caddyserver/caddy/v2/caddyconfig/httpcaddyfile"
 	"github.com/caddyserver/caddy/v2/modules/caddyhttp"
 	"github.com/redis/go-redis/v9"
-	"google.golang.org/appengine/log"
 )
 
 func init() {
@@ -35,7 +33,6 @@ func init() {
 func parseCaddyfile(helper httpcaddyfile.Helper) (caddyhttp.MiddlewareHandler, error) {
 	var h Handler
 	err := h.UnmarshalCaddyfile(helper.Dispenser)
-	log.Errorf(context.Background(), "Handler err %s", err)
 	return h, err
 }
 
