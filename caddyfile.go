@@ -188,7 +188,6 @@ func (h *Handler) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 				}
 				h.SweepInterval = caddy.Duration(interval)
 			case "banduration":
-				h.logger.Info("Configuring banduration")
 				if !d.NextArg() {
 					return d.ArgErr()
 				}
@@ -201,12 +200,11 @@ func (h *Handler) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 				}
 				h.BanDuration = caddy.Duration(duration)
 			case "banthreshold":
-				h.logger.Info("Configuring banthreshold")
 				if !d.NextArg() {
 					return d.ArgErr()
 				}
 				if h.BanThreshold != 0 {
-					return d.Errf("ban threshold already specified: %v", h.SweepInterval)
+					return d.Errf("ban threshold already specified: %v", h.BanThreshold)
 				}
 				threshold, err := strconv.ParseInt(d.Val(), 10, 64)
 				if err != nil {
@@ -215,12 +213,11 @@ func (h *Handler) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 				h.BanThreshold = int(threshold)
 
 			case "redisconn":
-				h.logger.Info("Configuring redisconn")
 				if !d.NextArg() {
 					return d.ArgErr()
 				}
 				if h.conn != nil {
-					return d.Errf("redis conn specified: %v", h.SweepInterval)
+					return d.Errf("redis conn specified: %v", h.conn)
 				}
 				redisConn := redis.NewClient(&redis.Options{
 					Addr: d.Val(),
