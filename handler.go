@@ -78,7 +78,7 @@ type Handler struct {
 	random     *weakrand.Rand
 	logger     *zap.Logger
 
-	conn *redis.Client
+	conn redis.Client
 
 	redisconn string `json:"redisconn,omitempty"`
 }
@@ -237,7 +237,7 @@ func (h *Handler) rateLimitExceeded(w http.ResponseWriter, r *http.Request, repl
 	return caddyhttp.Error(http.StatusTooManyRequests, nil)
 }
 
-func (h *Handler) incrDenies(identity string) error {
+func (h Handler) incrDenies(identity string) error {
 	identity = fmt.Sprintf("ban:%s", identity)
 	res, err := h.conn.Incr(context.Background(), identity).Result()
 	if err != nil {
@@ -267,7 +267,7 @@ func (h *Handler) incrDenies(identity string) error {
 	return nil
 }
 
-func (h *Handler) isBanned(identity string) (bool, error) {
+func (h Handler) isBanned(identity string) (bool, error) {
 	identity = fmt.Sprintf("ban:%s", identity)
 
 	res, err := h.conn.Get(context.Background(), identity).Int()

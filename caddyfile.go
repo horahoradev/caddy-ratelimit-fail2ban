@@ -15,6 +15,7 @@
 package caddyrl
 
 import (
+	"context"
 	"strconv"
 
 	"github.com/caddyserver/caddy/v2"
@@ -22,8 +23,8 @@ import (
 	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
 	"github.com/caddyserver/caddy/v2/caddyconfig/httpcaddyfile"
 	"github.com/caddyserver/caddy/v2/modules/caddyhttp"
-	"github.com/labstack/gommon/log"
 	"github.com/redis/go-redis/v9"
+	"google.golang.org/appengine/log"
 )
 
 func init() {
@@ -34,7 +35,7 @@ func init() {
 func parseCaddyfile(helper httpcaddyfile.Helper) (caddyhttp.MiddlewareHandler, error) {
 	var h Handler
 	err := h.UnmarshalCaddyfile(helper.Dispenser)
-	log.Errorf("Handler err %s", err)
+	log.Errorf(context.Background(), "Handler err %s", err)
 	return h, err
 }
 
@@ -218,14 +219,14 @@ func (h *Handler) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 				if !d.NextArg() {
 					return d.ArgErr()
 				}
-				if h.conn != nil {
-					return d.Errf("redis conn specified: %v", h.conn)
-				}
+				// if h.conn == nil {
+				// 	return d.Errf("redis conn specified: %v", h.conn)
+				// }
 				redisConn := redis.NewClient(&redis.Options{
 					Addr: d.Val(),
 					DB:   0, // use default DB
 				})
-				h.conn = redisConn
+				h.conn = *redisConn
 			}
 		}
 	}

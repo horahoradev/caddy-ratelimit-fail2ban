@@ -8,6 +8,7 @@ require (
 	github.com/google/uuid v1.3.1
 	github.com/redis/go-redis/v9 v9.5.0
 	go.uber.org/zap v1.26.0
+	google.golang.org/appengine v1.6.7
 )
 
 require (
