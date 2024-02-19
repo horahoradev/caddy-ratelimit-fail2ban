@@ -59,7 +59,6 @@ func (h *Handler) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 		}
 
 		for nesting := d.Nesting(); d.NextBlock(nesting); {
-			h.logger.Info(d.Val())
 			switch d.Val() {
 			case "zone":
 				if !d.NextArg() {
