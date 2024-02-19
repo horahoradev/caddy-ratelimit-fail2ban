@@ -77,8 +77,6 @@ type Handler struct {
 	storage    certmagic.Storage
 	random     *weakrand.Rand
 	logger     *zap.Logger
-
-	conn redis.Client `json:"redisconn,omitempty"`
 }
 
 // CaddyModule returns the Caddy module information.
@@ -237,18 +235,18 @@ func (h *Handler) rateLimitExceeded(w http.ResponseWriter, r *http.Request, repl
 
 func (h Handler) incrDenies(identity string) error {
 	identity = fmt.Sprintf("ban:%s", identity)
-	res, err := h.conn.Incr(context.Background(), identity).Result()
+	res, err := conn.Incr(context.Background(), identity).Result()
 	if err != nil {
 		return err
 	}
 
-	ttl, err := h.conn.TTL(context.Background(), identity).Result()
+	ttl, err := conn.TTL(context.Background(), identity).Result()
 	if err != nil {
 		return err
 	} else if ttl == -1 {
 		// TTL hasn't been set, so we need to set it to the refresh period
 		// hardcoded ban window of 5 minutes
-		err = h.conn.Expire(context.Background(), identity, time.Minute*5).Err()
+		err = conn.Expire(context.Background(), identity, time.Minute*5).Err()
 		if err != nil {
 			return err
 		}
@@ -256,7 +254,7 @@ func (h Handler) incrDenies(identity string) error {
 
 	if res >= int64(h.BanThreshold) {
 		// set the expire to the ban duration
-		err = h.conn.Expire(context.Background(), identity, time.Duration(h.BanDuration)).Err()
+		err = conn.Expire(context.Background(), identity, time.Duration(h.BanDuration)).Err()
 		if err != nil {
 			return err
 		}
@@ -268,7 +266,7 @@ func (h Handler) incrDenies(identity string) error {
 func (h Handler) isBanned(identity string) (bool, error) {
 	identity = fmt.Sprintf("ban:%s", identity)
 
-	cmd := h.conn.Get(context.Background(), identity)
+	cmd := conn.Get(context.Background(), identity)
 
 	res, err := cmd.Int()
 	if errors.Is(err, redis.Nil) {

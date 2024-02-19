@@ -36,6 +36,8 @@ func parseCaddyfile(helper httpcaddyfile.Helper) (caddyhttp.MiddlewareHandler, e
 	return h, err
 }
 
+var conn redis.Client
+
 // UnmarshalCaddyfile implements caddyfile.Unmarshaler. Syntax:
 //
 //	rate_limit {
@@ -223,7 +225,7 @@ func (h *Handler) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 					Addr: d.Val(),
 					DB:   0, // use default DB
 				})
-				h.conn = *redisConn
+				conn = *redisConn
 			}
 		}
 	}
