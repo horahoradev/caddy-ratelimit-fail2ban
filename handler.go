@@ -162,13 +162,6 @@ func (h *Handler) Provision(ctx caddy.Context) error {
 }
 
 func (h Handler) ServeHTTP(w http.ResponseWriter, r *http.Request, next caddyhttp.Handler) error {
-
-	banned, err := h.isBanned(r.RemoteAddr)
-	if err == nil && banned {
-		return caddyhttp.Error(http.StatusUnauthorized, nil)
-	} else if err != nil {
-		h.logger.Error("failed to determine user ban status", zap.Error(err))
-	}
 	repl := r.Context().Value(caddy.ReplacerCtxKey).(*caddy.Replacer)
 
 	// iterate the slice, not the map, so the order is deterministic
@@ -180,6 +173,13 @@ func (h Handler) ServeHTTP(w http.ResponseWriter, r *http.Request, next caddyhtt
 
 		// make key for the individual rate limiter in this zone
 		key := repl.ReplaceAll(rl.Key, "")
+
+		banned, err := h.isBanned(key)
+		if err == nil && banned {
+			return caddyhttp.Error(http.StatusUnauthorized, nil)
+		} else if err != nil {
+			h.logger.Error("failed to determine user ban status", zap.Error(err))
+		}
 
 		// the API for sync.Pool is unfortunate: there is no LoadOrNew() method
 		// which allocates/constructs a value only if needed, so we always need
@@ -199,11 +199,11 @@ func (h Handler) ServeHTTP(w http.ResponseWriter, r *http.Request, next caddyhtt
 		if h.Distributed == nil {
 			// internal rate limiter only
 			if dur := limiter.When(); dur > 0 {
-				return h.rateLimitExceeded(w, r, repl, rl.zoneName, dur)
+				return h.rateLimitExceeded(w, r, key, repl, rl.zoneName, dur)
 			}
 		} else {
 			// distributed rate limiting; add last known state of other instances
-			if err := h.distributedRateLimiting(w, r, repl, limiter, key, rl.zoneName); err != nil {
+			if err := h.distributedRateLimiting(w, r, key, repl, limiter, key, rl.zoneName); err != nil {
 				return err
 			}
 		}
@@ -212,7 +212,7 @@ func (h Handler) ServeHTTP(w http.ResponseWriter, r *http.Request, next caddyhtt
 	return next.ServeHTTP(w, r)
 }
 
-func (h *Handler) rateLimitExceeded(w http.ResponseWriter, r *http.Request, repl *caddy.Replacer, zoneName string, wait time.Duration) error {
+func (h *Handler) rateLimitExceeded(w http.ResponseWriter, r *http.Request, key string, repl *caddy.Replacer, zoneName string, wait time.Duration) error {
 	// add jitter, if configured
 	if h.random != nil {
 		jitter := h.randomFloatInRange(0, float64(wait)*h.Jitter)
