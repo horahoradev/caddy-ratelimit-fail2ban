@@ -78,9 +78,7 @@ type Handler struct {
 	random     *weakrand.Rand
 	logger     *zap.Logger
 
-	conn redis.Client
-
-	redisconn string `json:"redisconn,omitempty"`
+	conn redis.Client `json:"redisconn,omitempty"`
 }
 
 // CaddyModule returns the Caddy module information.
@@ -270,7 +268,9 @@ func (h Handler) incrDenies(identity string) error {
 func (h Handler) isBanned(identity string) (bool, error) {
 	identity = fmt.Sprintf("ban:%s", identity)
 
-	res, err := h.conn.Get(context.Background(), identity).Int()
+	cmd := h.conn.Get(context.Background(), identity)
+
+	res, err := cmd.Int()
 	if errors.Is(err, redis.Nil) {
 		return false, nil
 	} else if err != nil {
